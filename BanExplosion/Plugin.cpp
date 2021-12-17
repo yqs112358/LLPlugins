@@ -7,7 +7,7 @@
 #include <RegCommandAPI.h>
 #include <MC/CommandOrigin.hpp>
 #include <MC/CommandOutput.hpp>
-#include <MC/CommandPosition.hpp>
+//#include <MC/CommandPosition.hpp>
 #include <MC/CommandRegistry.hpp>
 #include "SimpleIni.h"
 using namespace std;
@@ -89,7 +89,7 @@ bool ReloadIni()
     return ini.LoadFile(_CONF_PATH) == 0;
 }
 
-class BanexpCommand :
+class BanExplosionCommand :
     public Command
 {
 public:
@@ -131,8 +131,16 @@ public:
             { (CommandFlagValue)0 }, 
             { (CommandFlagValue)0x80 }
         );
-        registry->addEnum<BanexpCommand::EXPOP>("EXPOP", { { "off", EXPOP::off } , { "on", EXPOP::on} , { "reload", EXPOP::reload} });
-        registry->registerOverload<BanexpCommand>("Banexp", makeMandatory<CommandParameterDataType::ENUM>(&BanexpCommand::op, "operator", "EXPOP"));
+        registry->addEnum<BanExplosionCommand::EXPOP>(
+            "EXPOP", 
+            { { "off", EXPOP::off } , 
+            { "on", EXPOP::on} , 
+            { "reload", EXPOP::reload} }
+        );
+        registry->registerOverload<BanExplosionCommand>(
+            "Banexp", 
+            makeMandatory<CommandParameterDataType::ENUM>(&BanExplosionCommand::op, "operator", "EXPOP")
+            );
     }
 };
 
@@ -144,8 +152,8 @@ void entry()
     auto res = ini.LoadFile(_CONF_PATH);
     if (res < 0)
     {
-        logger.error("[BanExplosion] 防爆插件加载配置文件失败！");
-        logger.error("[BanExplosion] 插件将不会正常工作。");
+        logger.error("防爆插件加载配置文件失败！");
+        logger.error("插件将不会正常工作。");
         return;
     }
     LL::registerPlugin("BanExplosion", "BanExplosion自定义防爆插件", LL::Version(1, 5, 3),
@@ -153,12 +161,12 @@ void entry()
 
     Event::RegCmdEvent::subscribe([](Event::RegCmdEvent ev) {
         auto& reg = ev.mCommandRegistry;
-        BanexpCommand::setup(reg);
+        BanExplosionCommand::setup(reg);
         return true;
         });
 
-    logger.info(string("[BanExplosion] BanExplosion自定义防爆插件-已装载  当前版本：") + _VER);
-    logger.info(string("[BanExplosion] 配置文件位于：") + _CONF_PATH);
-    logger.info("[BanExplosion] 作者：yqs112358   首发平台：MineBBS");
-    logger.info("[BanExplosion] 欲联系作者可前往MineBBS论坛");
+    logger.info(string("BanExplosion自定义防爆插件-已装载  当前版本：") + _VER);
+    logger.info(string("配置文件位于：") + _CONF_PATH);
+    logger.info("作者：yqs112358   首发平台：MineBBS");
+    logger.info("欲联系作者可前往MineBBS论坛");
 }

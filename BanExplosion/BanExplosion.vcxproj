@@ -82,7 +82,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)SDK\Header;$(SolutionDir)headers;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\SDK\Header;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -152,7 +152,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>$(ProjectDir)SDK\Lib\bedrock_server_api.lib;$(ProjectDir)SDK\Lib\bedrock_server_var.lib;$(ProjectDir)SDK\Lib\SymDBHelper.lib;$(ProjectDir)SDK\Lib\LiteLoader.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\SDK\Lib\bedrock_server_api.lib;..\SDK\Lib\bedrock_server_var.lib;..\SDK\Lib\SymDBHelper.lib;..\SDK\Lib\LiteLoader.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>bedrock_server.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
