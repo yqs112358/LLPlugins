@@ -11,7 +11,8 @@ inline void ErrorOutput(const string& err)
     logger.error("{}",err);
 }
 
-inline void SendFeedback(Player* p, const string& msg)
+template<typename ... Args>
+inline void SendFeedback(Player* p, const string& msg, Args ...args)
 {
     auto pls = Level::getAllPlayers();
     bool found = false;
@@ -30,24 +31,25 @@ inline void SendFeedback(Player* p, const string& msg)
     }
 
     if (!p)
-        logger.info(msg);
+        logger.info(msg, args...);
     else
     {
         try
         {
-            p->sendTextPacket("§e[BackupHelper]§r " + msg, TextType::RAW);
+            //p->sendTextPacket("§e[BackupHelper]§r " + msg, TextType::RAW);
+            p->sendFormattedText("§e[BackupHelper]§r " + msg, args...);
         }
         catch (const seh_exception&)
         {
             extern Player* nowPlayer;
             nowPlayer = nullptr;
-            logger.info(msg);
+            logger.info(msg, args...);
         }
         catch (const exception&)
         {
             extern Player* nowPlayer;
             nowPlayer = nullptr;
-            logger.info(msg);
+            logger.info(msg, args...);
         }
     }
 }

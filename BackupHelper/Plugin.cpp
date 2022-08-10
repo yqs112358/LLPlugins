@@ -26,6 +26,15 @@ THook(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$a
     return original(_this, cmd);
 }
 
+//存档开始加载前替换存档文件
+//此函数是BDS在读取server..properties文件的配置，并在BDS启动完成后构析掉_this
+THook(void, "??0PropertiesSettings@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+    void* _this, void* a2)
+{
+    RecoverWorld();
+    return original(_this, a2);
+}
+
 bool Raw_IniOpen(const string& path, const std::string& defContent)
 {
     if (!filesystem::exists(path))
