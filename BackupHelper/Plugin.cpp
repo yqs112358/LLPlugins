@@ -76,6 +76,8 @@ void entry()
 	logger.info("BackupHelper存档备份助手-已装载  当前版本：{}", ver.toString());
     logger.info("OP/后台命令： backup 开始备份");
     logger.info("OP/后台命令： backup reload 重新加载配置文件");
+    logger.info("OP/后台命令： backup list 列出已有备份");
+    logger.info("OP/后台命令： backup recover [int] 选择存档回档，重启生效");
     logger.info("作者：yqs112358   首发平台：MineBBS");
     logger.info("欲联系作者可前往MineBBS论坛");
 
