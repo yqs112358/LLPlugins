@@ -26,6 +26,15 @@ THook(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$a
     return original(_this, cmd);
 }
 
+//存档开始加载前替换存档文件
+//此函数是BDS在读取server..properties文件的配置，并在BDS启动完成后构析掉_this
+THook(void, "??0PropertiesSettings@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+    void* _this, void* a2)
+{
+    RecoverWorld();
+    return original(_this, a2);
+}
+
 bool Raw_IniOpen(const string& path, const std::string& defContent)
 {
     if (!filesystem::exists(path))
@@ -67,6 +76,8 @@ void entry()
 	logger.info("BackupHelper存档备份助手-已装载  当前版本：{}", ver.toString());
     logger.info("OP/后台命令： backup 开始备份");
     logger.info("OP/后台命令： backup reload 重新加载配置文件");
+    logger.info("OP/后台命令： backup list 列出已有备份");
+    logger.info("OP/后台命令： backup recover [int] 选择存档回档，重启生效");
     logger.info("作者：yqs112358   首发平台：MineBBS");
     logger.info("欲联系作者可前往MineBBS论坛");
 

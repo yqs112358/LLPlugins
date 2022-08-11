@@ -6,13 +6,16 @@
 #include <string>
 #include <thread>
 #include <filesystem>
+#include <regex>
 using namespace std;
 
 #define TEMP_DIR "./plugins/BackupHelper/temp/"
+#define TEMP1_DIR "./plugins/BackupHelper/temp1/"
 #define ZIP_PATH ".\\plugins\\BackupHelper\\7za.exe"
 
 bool isWorking = false;
 Player* nowPlayer = nullptr;
+std::vector<std::string> backupList = {};
 
 struct SnapshotFilenameAndLength
 {
@@ -228,6 +231,122 @@ bool ZipFiles(const string &worldName)
     return true;
 }
 
+bool UnzipFiles(const string& fileName)
+{
+    try
+    {
+        //Get Name
+
+        string backupPath = ini.GetValue("Main", "BackupPath", "backup");
+        int level = ini.GetLongValue("Main", "Compress", 0);
+
+        //Prepare command line
+        char tmpParas[_MAX_PATH * 4] = { 0 };
+        sprintf(tmpParas, "x \"%s\\%s\" -o%s"
+            , backupPath.c_str(), fileName.c_str(), TEMP1_DIR);
+
+        wchar_t paras[_MAX_PATH * 4] = { 0 };
+        str2wstr(tmpParas).copy(paras, strlen(tmpParas), 0);
+        filesystem::remove_all(TEMP1_DIR);
+
+        DWORD maxWait = ini.GetLongValue("Main", "MaxWaitForZip", 0);
+        if (maxWait <= 0)
+            maxWait = 0xFFFFFFFF;
+        else
+            maxWait *= 1000;
+
+        //Start Process
+        wstring zipPath = str2wstr(ZIP_PATH);
+        SHELLEXECUTEINFO sh = { sizeof(SHELLEXECUTEINFO) };
+        sh.fMask = SEE_MASK_NOCLOSEPROCESS;
+        sh.hwnd = NULL;
+        sh.lpVerb = L"open";
+        sh.nShow = SW_HIDE;
+        sh.lpFile = zipPath.c_str();
+        sh.lpParameters = paras;
+        if (!ShellExecuteEx(&sh))
+        {
+            SendFeedback(nowPlayer, "Fail to Unzip process!");
+            //FailEnd(GetLastError());
+            return false;
+        }
+
+        ControlResourceUsage(sh.hProcess);
+        SetPriorityClass(sh.hProcess, BELOW_NORMAL_PRIORITY_CLASS);
+
+        //Wait
+        DWORD res;
+        if ((res = WaitForSingleObject(sh.hProcess, maxWait)) == WAIT_TIMEOUT || res == WAIT_FAILED)
+        {
+            SendFeedback(nowPlayer, "Unzip process timeout!");
+            //FailEnd(GetLastError());
+        }
+        CloseHandle(sh.hProcess);
+    }
+    catch (const seh_exception& e)
+    {
+        SendFeedback(nowPlayer, "Exception in unzip process! Error Code:" + to_string(e.code()));
+        //FailEnd(GetLastError());
+        return false;
+    }
+    catch (const exception& e)
+    {
+        SendFeedback(nowPlayer, string("Exception in unzip process!\n") + e.what());
+        //FailEnd(GetLastError());
+        return false;
+    }
+    ini.SetBoolValue("BackFile", "isBack", true);
+    ini.SaveFile(_CONFIG_FILE);
+    return true;
+}
+
+std::vector<std::string> getAllBackup() {
+    string backupPath = ini.GetValue("Main", "BackupPath", "backup");
+    filesystem::directory_entry entry(backupPath);
+    regex isBackFile(".*7z");
+    std::vector<std::string> backupList;
+    if (entry.status().type() == filesystem::file_type::directory) {
+        for (const auto& iter : filesystem::directory_iterator(backupPath)) {
+            string str = iter.path().filename().string();
+            if (std::regex_match(str, isBackFile)) {
+                backupList.push_back(str);
+            }
+        }
+    }
+    std::reverse(backupList.begin(), backupList.end());
+    return backupList;
+}
+
+bool CopyRecoverFile(const string& worldName) {
+    std::error_code error;
+    //判断回档文件存在
+    auto file_status = std::filesystem::status(TEMP1_DIR + worldName, error);
+    if (error) return false;
+    if (!std::filesystem::exists(file_status)) return false;
+
+    //开始回档
+    //先重名原来存档，再复制回档文件
+    auto file_status1 = std::filesystem::status("./worlds/" + worldName, error);
+    if (error) return false;
+    if (std::filesystem::exists(file_status1) && std::filesystem::exists(file_status)) {
+        filesystem::rename("./worlds/" + worldName, "./worlds/" + worldName + "_bak");
+    }
+    else {
+        return false;
+    }
+    filesystem::copy(TEMP1_DIR, "./worlds", std::filesystem::copy_options::recursive, error);
+    if (error.value() != 0)
+    {
+        SendFeedback(nowPlayer, "Failed to copy files!\n" + error.message());
+        filesystem::remove_all(TEMP1_DIR);
+        filesystem::rename("./worlds/" + worldName + "_bak", "./worlds/" + worldName);
+        return false;
+    }
+    filesystem::remove_all(TEMP1_DIR);
+    filesystem::remove_all("./worlds/" + worldName + "_bak");
+    return true;
+}
+
 bool StartBackup()
 {
     SendFeedback(nowPlayer, "备份已启动");
@@ -243,6 +362,33 @@ bool StartBackup()
         FailEnd(e.code());
         return false;
     }
+    return true;
+}
+
+bool StartRecover(int recover_NUM)
+{
+    SendFeedback(nowPlayer, "回档前准备已启动");
+    if (backupList.empty())
+    {
+        SendFeedback(nowPlayer, "插件内部存档列表为空，请使用list子指令后再试");
+        return false;
+    }
+    unsigned int i = recover_NUM + 1;
+    if (i > backupList.size()) {
+        SendFeedback(nowPlayer, "存档选择参数不在已有存档数内，请重新选择");
+        return false;
+    }
+    isWorking = true;
+    SendFeedback(nowPlayer, "正在进行回档文件解压复制");
+    if (!UnzipFiles(backupList[recover_NUM])) {
+        SendFeedback(nowPlayer, "回档文件准备失败");
+        isWorking = false;
+        return false;
+    };
+    SendFeedback(nowPlayer, "回档文件准备完成,即将进行回档前备份");
+    Level::runcmd("save hold");
+    SendFeedback(nowPlayer, "回档准备已完成，重启可回档,使用backup cancel指令可取消回档");
+    backupList.clear();
     return true;
 }
 
@@ -296,6 +442,8 @@ THook(vector<SnapshotFilenameAndLength>&, "?createSnapshot@DBStorage@@UEAA?AV?$v
     DBStorage* _this, vector<SnapshotFilenameAndLength>& fileData, string& worldName)
 {
     if (isWorking) {
+        ini.SetValue("BackFile", "worldName", worldName.c_str());
+        ini.SaveFile(_CONFIG_FILE);
         auto& files = original(_this, fileData, worldName);
         if (CopyFiles(worldName, files))
         {
